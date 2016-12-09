@@ -17,9 +17,11 @@
 
 apply plugin: 'java'
 apply plugin: 'maven'
+apply plugin: 'signing'
 
-group = 'com.thoughtworks.go'
-version = '1.0'
+group = 'cd.go.plugin'
+archivesBaseName = 'gocd-package-material-plugin-shim'
+version = '16.12.0'
 
 sourceCompatibility = 1.7
 targetCompatibility = 1.7
@@ -37,6 +39,24 @@ sourceSets {
     }
 }
 
+task javadocJar(type: Jar) {
+    classifier = 'javadoc'
+    from javadoc
+}
+
+task sourcesJar(type: Jar) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+artifacts {
+    archives javadocJar, sourcesJar
+}
+
+signing {
+    sign configurations.archives
+}
+
 repositories {
     mavenCentral()
     maven { url "http://repo.maven.apache.org/maven2" }
@@ -45,4 +65,48 @@ repositories {
 dependencies {
     compile group: 'cd.go.plugin', name: 'go-plugin-api', version:'16.11.0'
     compile group: 'com.google.code.gson', name: 'gson', version:'2.3.1'
+}
+
+uploadArchives {
+  repositories {
+    mavenDeployer {
+      beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
+      repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+        authentication(userName: ossrhUsername, password: ossrhPassword)
+      }
+
+      snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
+        authentication(userName: ossrhUsername, password: ossrhPassword)
+      }
+
+      pom.project {
+        name 'Shim for GoCD package repository poller plugin'
+        packaging 'jar'
+        description 'A shim to help upgrade GoCD package repository poller plugins to work with GoCD 17.1 (if they use the old API-based extension point)'
+        url 'https://www.go.cd/'
+
+        scm {
+          connection 'scm:git:https://github.com/gocd-contrib/gocd-package-material-plugin-shim/'
+          developerConnection 'scm:git:https://github.com/gocd-contrib/gocd-package-material-plugin-shim/'
+          url 'https://github.com/gocd-contrib/gocd-package-material-plugin-shim/'
+        }
+
+        licenses {
+          license {
+            name 'The Apache License, Version 2.0'
+            url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+          }
+        }
+
+        developers {
+          developer {
+            id 'gocd-team'
+            name 'GoCD Team'
+            email 'go-cd@googlegroups.com'
+          }
+        }
+      }
+    }
+  }
 }
